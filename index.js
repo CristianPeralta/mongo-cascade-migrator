@@ -1,8 +1,17 @@
+require('dotenv').config();
+const { connectToMongo } = require('./db/connect');
+
+const SOURCE_URI = process.env.SOURCE_URI || 'mongodb://localhost:27017/source_db';
+const TARGET_URI = process.env.TARGET_URI || 'mongodb://localhost:27017/target_db';
+
 async function main() {
   const args = process.argv.slice(2);
   const modelArg = args.find((arg) => arg.startsWith('--model='));
   const idArg = args.find((arg) => arg.startsWith('--id='));
   const queryArg = args.find((arg) => arg.startsWith('--query='));
+
+  const sourceConnection = await connectToMongo(SOURCE_URI);
+  const targetConnection = await connectToMongo(TARGET_URI);
 
   if (!modelArg || (!idArg && !queryArg)) {
     console.error(
@@ -21,6 +30,9 @@ async function main() {
   } else if (query) {
     console.log('This is the query:', query);
   }
+
+  await sourceConnection.close();
+  await targetConnection.close();
 }
 
 main();
