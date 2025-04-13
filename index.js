@@ -31,6 +31,9 @@ async function main() {
   console.log('This is the model name:', modelName);
   if (rootId) {
     console.log('This is the root Id:', rootId);
+    const SourceModel = sourceConnection.model(modelName);
+    const originalDoc = await SourceModel.findById(rootId).lean();
+    console.log('This is the original document:', originalDoc);
   } else if (query) {
     console.log('This is the query:', query);
   }
