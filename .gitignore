@@ -138,3 +138,11 @@ dist
 
 # vscode
 .vscode
+
+# schemas
+models/schemas/*
+# But don't ignore Example.js!
+!/models/schemas/Example.js
+
+# utils
+utils/
