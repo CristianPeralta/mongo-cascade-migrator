@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { connectToMongo } = require('./db/connect');
 const { registerModels } = require('./models');
+const mongoose = require('mongoose');
 
 const SOURCE_URI = process.env.SOURCE_URI || 'mongodb://localhost:27017/source_db';
 const TARGET_URI = process.env.TARGET_URI || 'mongodb://localhost:27018/target_db';
@@ -29,11 +30,21 @@ async function main() {
   registerModels(targetConnection);
 
   console.log('This is the model name:', modelName);
+  const idMap = new Map();
   if (rootId) {
     console.log('This is the root Id:', rootId);
     const SourceModel = sourceConnection.model(modelName);
     const originalDoc = await SourceModel.findById(rootId).lean();
+    if (!originalDoc) {
+      console.error('Original document not found');
+      process.exit(1);
+    }
+    const newId = new mongoose.Types.ObjectId();
+    idMap.set(rootId, newId);
+    const clonedDoc = { ...originalDoc, _id: newId };
     console.log('This is the original document:', originalDoc);
+    console.log('This is the cloned document:', clonedDoc);
+    console.log('This is the id map:', idMap);
   } else if (query) {
     console.log('This is the query:', query);
   }
