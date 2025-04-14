@@ -3,7 +3,7 @@ const { connectToMongo } = require('./db/connect');
 const { registerModels } = require('./models');
 
 const SOURCE_URI = process.env.SOURCE_URI || 'mongodb://localhost:27017/source_db';
-const TARGET_URI = process.env.TARGET_URI || 'mongodb://localhost:27017/target_db';
+const TARGET_URI = process.env.TARGET_URI || 'mongodb://localhost:27018/target_db';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -42,4 +42,7 @@ async function main() {
   await targetConnection.close();
 }
 
-main();
+main().catch((error) => {
+  console.error('Error in main function:', error);
+  process.exit(1);
+});
