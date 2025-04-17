@@ -38,7 +38,11 @@ async function main() {
       modelName,
       rootId
     );
-    console.log('This is the new Id:', newId);
+    if (newId) {
+      console.log(`Document migrated. New ID: ${newId}`);
+    } else {
+      console.log(`No document found with ID: ${rootId}`);
+    }
   } else if (query) {
     console.log('This is the query:', query);
   }
@@ -59,11 +63,32 @@ const migrateDocumentCascade = async (sourceConnection, targetConnection, modelN
   const newId = new mongoose.Types.ObjectId();
   idMap.set(rootId, newId);
   const clonedDoc = { ...originalDoc, _id: newId };
-  console.log('This is the original document:', originalDoc);
-  console.log('This is the cloned document:', clonedDoc);
-  console.log('This is the id map:', idMap);
+
+  for (const [key, value] of Object.entries(originalDoc)) {
+    if (isSingleReference(value)) {
+      console.log('This is the single reference:', key, value);
+    } else if (isArrayOfReferences(value)) {
+      console.log('This is the array of references:', key, value);
+    }
+  }
   return newId;
 };
+
+function isSingleReference(value) {
+  if (value instanceof mongoose.Types.ObjectId) {
+    return true;
+  }
+
+  return (
+    typeof value === 'string' &&
+    mongoose.Types.ObjectId.isValid(value) &&
+    new mongoose.Types.ObjectId(value).toString() === value
+  );
+}
+
+function isArrayOfReferences(value) {
+  return Array.isArray(value) && value.every((v) => isSingleReference(v));
+}
 
 main().catch((error) => {
   console.error('Error in main function:', error);
