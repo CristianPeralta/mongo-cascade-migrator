@@ -32,19 +32,13 @@ async function main() {
   console.log('This is the model name:', modelName);
   const idMap = new Map();
   if (rootId) {
-    console.log('This is the root Id:', rootId);
-    const SourceModel = sourceConnection.model(modelName);
-    const originalDoc = await SourceModel.findById(rootId).lean();
-    if (!originalDoc) {
-      console.error('Original document not found');
-      process.exit(1);
-    }
-    const newId = new mongoose.Types.ObjectId();
-    idMap.set(rootId, newId);
-    const clonedDoc = { ...originalDoc, _id: newId };
-    console.log('This is the original document:', originalDoc);
-    console.log('This is the cloned document:', clonedDoc);
-    console.log('This is the id map:', idMap);
+    const newId = await migrateDocumentCascade(
+      sourceConnection,
+      targetConnection,
+      modelName,
+      rootId
+    );
+    console.log('This is the new Id:', newId);
   } else if (query) {
     console.log('This is the query:', query);
   }
@@ -52,6 +46,24 @@ async function main() {
   await sourceConnection.close();
   await targetConnection.close();
 }
+
+const migrateDocumentCascade = async (sourceConnection, targetConnection, modelName, rootId) => {
+  const idMap = new Map();
+  console.log('This is the root Id:', rootId);
+  const SourceModel = sourceConnection.model(modelName);
+  const originalDoc = await SourceModel.findById(rootId).lean();
+  if (!originalDoc) {
+    console.error('Original document not found');
+    process.exit(1);
+  }
+  const newId = new mongoose.Types.ObjectId();
+  idMap.set(rootId, newId);
+  const clonedDoc = { ...originalDoc, _id: newId };
+  console.log('This is the original document:', originalDoc);
+  console.log('This is the cloned document:', clonedDoc);
+  console.log('This is the id map:', idMap);
+  return newId;
+};
 
 main().catch((error) => {
   console.error('Error in main function:', error);
