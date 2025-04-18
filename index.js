@@ -42,6 +42,7 @@ async function main() {
   } else if (query) {
     console.log('This is the query:', query);
   }
+  console.log('This is the id map:', idMap);
 
   // Close connections using the singleton
   connectionManager.closeConnections();
@@ -66,6 +67,8 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
   const clonedDoc = { ...originalDoc, _id: newId };
 
   for (const [key, value] of Object.entries(originalDoc)) {
+    // ignore _id
+    if (key === '_id') continue;
     if (isSingleReference(value)) {
       const refModel = detectModelByPath(SourceModel, key);
       if (refModel) {
@@ -82,9 +85,11 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
       if (refModel) {
         const newRefs = [];
         for (const refId of value) {
-          const newRefId = await migrateDocumentCascade(refModel, refId.toString(), new Map(idMap));
+          const newRefId = await migrateDocumentCascade(refModel, refId.toString(), idMap);
           if (newRefId) {
             newRefs.push(newRefId);
+          } else {
+            console.error(`Failed to migrate reference ${refId} for model ${refModel}`);
           }
         }
         clonedDoc[key] = newRefs;
