@@ -50,6 +50,12 @@ async function main() {
 
 const migrateDocumentCascade = async (modelName, rootId, idMap) => {
   console.log('---------------------------------------------------------');
+  // Check if document has already been migrated
+  if (idMap.has(rootId)) {
+    console.log(`Document ${rootId} already migrated to ${idMap.get(rootId)}`);
+    return idMap.get(rootId);
+  }
+
   // Get connections from the singleton
   const sourceConnection = connectionManager.getSourceConnection();
   const targetConnection = connectionManager.getTargetConnection();
@@ -72,7 +78,6 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
     if (isSingleReference(value)) {
       const refModel = detectModelByPath(SourceModel, key);
       if (refModel) {
-        // TO DO: Migrate the reference document
         const newRefId = await migrateDocumentCascade(refModel, value.toString(), idMap);
         if (newRefId) {
           clonedDoc[key] = newRefId;
@@ -94,27 +99,27 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
         }
         clonedDoc[key] = newRefs;
       }
-    }
-    // TO DO: Consider other kind of fields like objects and array of objects
-    // Date fields are not migrated
-    else if (
+    } else if (
       typeof value === 'object' &&
       value !== null &&
       !Array.isArray(value) &&
       !isDate(value)
     ) {
-      // This could contain references, so we need to migrate them
-      console.log('This is a object:', value);
-      clonedDoc[key] = value;
+      // Handle nested objects - they might contain references
+      console.log(`Processing nested object in field ${key}:`, value);
+      clonedDoc[key] = await processNestedObject(value, SourceModel, key, idMap);
     } else if (Array.isArray(value)) {
-      console.log('This is an array:', value);
-      clonedDoc[key] = value;
+      // Handle arrays - they might contain objects or references
+      console.log(`Processing array in field ${key}:`, value);
+      clonedDoc[key] = await processArray(value, SourceModel, key, idMap);
     } else {
+      // Simple value (string, number, boolean, etc.)
       clonedDoc[key] = value;
     }
   }
-  console.log(`This is the cloned document with model: ${modelName}`, clonedDoc);
-  // TO DO: Save the cloned document
+
+  console.log(`Saving cloned document with model: ${modelName}`, clonedDoc);
+  // Save the cloned document
   // await TargetModel.create(clonedDoc);
   return newId;
 };
@@ -136,7 +141,12 @@ function isArrayOfReferences(value) {
 }
 
 function isDate(value) {
-  return value instanceof Date;
+  return (
+    value instanceof Date ||
+    (typeof value === 'object' &&
+      value !== null &&
+      Object.prototype.toString.call(value) === '[object Date]')
+  );
 }
 
 /**
@@ -157,6 +167,100 @@ function detectModelByPath(model, path) {
   }
 
   return null;
+}
+
+/**
+ * Process a nested object to handle any references it might contain
+ */
+async function processNestedObject(obj, parentModel, parentPath, idMap) {
+  const result = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    const fullPath = `${parentPath}.${key}`;
+
+    if (isSingleReference(value)) {
+      // Handle reference in nested object
+      const refModel = detectModelByPath(parentModel, fullPath);
+      if (refModel) {
+        const newRefId = await migrateDocumentCascade(refModel, value.toString(), idMap);
+        if (newRefId) {
+          result[key] = newRefId;
+        }
+      } else {
+        // If not a reference or reference model not found, keep original value
+        result[key] = value;
+      }
+    } else if (isArrayOfReferences(value)) {
+      // Handle array of references in nested object
+      const refModel = detectModelByPath(parentModel, fullPath);
+      if (refModel) {
+        const newRefs = [];
+        for (const refId of value) {
+          const newRefId = await migrateDocumentCascade(refModel, refId.toString(), idMap);
+          if (newRefId) {
+            newRefs.push(newRefId);
+          }
+        }
+        result[key] = newRefs;
+      } else {
+        result[key] = value;
+      }
+    } else if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isDate(value)
+    ) {
+      // Recursively process nested objects
+      result[key] = await processNestedObject(value, parentModel, fullPath, idMap);
+    } else if (Array.isArray(value)) {
+      // Process arrays in nested objects
+      result[key] = await processArray(value, parentModel, fullPath, idMap);
+    } else {
+      // Simple value
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Process an array to handle any objects or references it might contain
+ */
+async function processArray(arr, parentModel, parentPath, idMap) {
+  const result = [];
+
+  for (let i = 0; i < arr.length; i++) {
+    const value = arr[i];
+    const itemPath = `${parentPath}.${i}`;
+
+    if (isSingleReference(value)) {
+      // Handle reference in array
+      const refModel = detectModelByPath(parentModel, parentPath);
+      if (refModel) {
+        const newRefId = await migrateDocumentCascade(refModel, value.toString(), idMap);
+        if (newRefId) {
+          result.push(newRefId);
+        }
+      } else {
+        result.push(value);
+      }
+    } else if (typeof value === 'object' && value !== null && !isDate(value)) {
+      if (Array.isArray(value)) {
+        // Handle nested arrays
+        result.push(await processArray(value, parentModel, itemPath, idMap));
+      } else {
+        // Handle objects in arrays
+        result.push(await processNestedObject(value, parentModel, itemPath, idMap));
+      }
+    } else {
+      // Simple value
+      result.push(value);
+    }
+  }
+
+  return result;
 }
 
 main().catch((error) => {
