@@ -95,6 +95,23 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
         clonedDoc[key] = newRefs;
       }
     }
+    // TO DO: Consider other kind of fields like objects and array of objects
+    // Date fields are not migrated
+    else if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      !isDate(value)
+    ) {
+      // This could contain references, so we need to migrate them
+      console.log('This is a object:', value);
+      clonedDoc[key] = value;
+    } else if (Array.isArray(value)) {
+      console.log('This is an array:', value);
+      clonedDoc[key] = value;
+    } else {
+      clonedDoc[key] = value;
+    }
   }
   console.log(`This is the cloned document with model: ${modelName}`, clonedDoc);
   // TO DO: Save the cloned document
@@ -116,6 +133,10 @@ function isSingleReference(value) {
 
 function isArrayOfReferences(value) {
   return Array.isArray(value) && value.every((v) => isSingleReference(v));
+}
+
+function isDate(value) {
+  return value instanceof Date;
 }
 
 /**
