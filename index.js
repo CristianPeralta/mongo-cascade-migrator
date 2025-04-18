@@ -49,15 +49,13 @@ async function main() {
 
 const migrateDocumentCascade = async (modelName, rootId, idMap) => {
   console.log('---------------------------------------------------------');
-  console.log('This is the model name:', modelName);
-  console.log('This is the root Id:', rootId);
-  console.log('This is the id map:', idMap);
-
   // Get connections from the singleton
   const sourceConnection = connectionManager.getSourceConnection();
   const targetConnection = connectionManager.getTargetConnection();
 
   const SourceModel = sourceConnection.model(modelName);
+  const TargetModel = targetConnection.model(modelName);
+
   const originalDoc = await SourceModel.findById(rootId).lean();
   if (!originalDoc) {
     console.error('Original document not found');
@@ -69,31 +67,33 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
 
   for (const [key, value] of Object.entries(originalDoc)) {
     if (isSingleReference(value)) {
-      console.log('This is the single reference:', key, value);
       const refModel = detectModelByPath(SourceModel, key);
       if (refModel) {
-        console.log('This is the reference model:', refModel);
+        // TO DO: Migrate the reference document
+        const newRefId = await migrateDocumentCascade(refModel, value.toString(), idMap);
+        if (newRefId) {
+          clonedDoc[key] = newRefId;
+        } else {
+          delete clonedDoc[key]; // delete orphan reference
+        }
       }
     } else if (isArrayOfReferences(value)) {
-      console.log('This is the array of references:', key, value);
       const refModel = detectModelByPath(SourceModel, key);
       if (refModel) {
-        console.log('This is the array reference model:', refModel);
         const newRefs = [];
         for (const refId of value) {
-          console.log('This is the migrate props:', {
-            modelName: refModel,
-            rootId: refId.toString(),
-            idMap: new Map(idMap),
-          });
           const newRefId = await migrateDocumentCascade(refModel, refId.toString(), new Map(idMap));
-          newRefs.push(newRefId);
+          if (newRefId) {
+            newRefs.push(newRefId);
+          }
         }
         clonedDoc[key] = newRefs;
       }
     }
   }
   console.log(`This is the cloned document with model: ${modelName}`, clonedDoc);
+  // TO DO: Save the cloned document
+  // await TargetModel.create(clonedDoc);
   return newId;
 };
 
