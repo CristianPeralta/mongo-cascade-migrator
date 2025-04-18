@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { connectToMongo } = require('./db/connect');
+const { connectionManager } = require('./db/connect');
 const { registerModels } = require('./models');
 const mongoose = require('mongoose');
 
@@ -23,8 +23,9 @@ async function main() {
   const rootId = idArg ? idArg.split('=')[1] : null;
   const query = queryArg ? JSON.parse(queryArg.split('=')[1]) : null;
 
-  const sourceConnection = await connectToMongo(SOURCE_URI);
-  const targetConnection = await connectToMongo(TARGET_URI);
+  // Use the singleton for connections
+  const sourceConnection = connectionManager.setSourceConnection(SOURCE_URI);
+  const targetConnection = connectionManager.setTargetConnection(TARGET_URI);
 
   registerModels(sourceConnection);
   registerModels(targetConnection);
@@ -32,12 +33,7 @@ async function main() {
   console.log('This is the model name:', modelName);
   const idMap = new Map();
   if (rootId) {
-    const newId = await migrateDocumentCascade(
-      sourceConnection,
-      targetConnection,
-      modelName,
-      rootId
-    );
+    const newId = await migrateDocumentCascade(modelName, rootId, idMap);
     if (newId) {
       console.log(`Document migrated. New ID: ${newId}`);
     } else {
@@ -47,18 +43,25 @@ async function main() {
     console.log('This is the query:', query);
   }
 
-  await sourceConnection.close();
-  await targetConnection.close();
+  // Close connections using the singleton
+  connectionManager.closeConnections();
 }
 
-const migrateDocumentCascade = async (sourceConnection, targetConnection, modelName, rootId) => {
-  const idMap = new Map();
+const migrateDocumentCascade = async (modelName, rootId, idMap) => {
+  console.log('---------------------------------------------------------');
+  console.log('This is the model name:', modelName);
   console.log('This is the root Id:', rootId);
+  console.log('This is the id map:', idMap);
+
+  // Get connections from the singleton
+  const sourceConnection = connectionManager.getSourceConnection();
+  const targetConnection = connectionManager.getTargetConnection();
+
   const SourceModel = sourceConnection.model(modelName);
   const originalDoc = await SourceModel.findById(rootId).lean();
   if (!originalDoc) {
     console.error('Original document not found');
-    process.exit(1);
+    return null;
   }
   const newId = new mongoose.Types.ObjectId();
   idMap.set(rootId, newId);
@@ -67,10 +70,30 @@ const migrateDocumentCascade = async (sourceConnection, targetConnection, modelN
   for (const [key, value] of Object.entries(originalDoc)) {
     if (isSingleReference(value)) {
       console.log('This is the single reference:', key, value);
+      const refModel = detectModelByPath(SourceModel, key);
+      if (refModel) {
+        console.log('This is the reference model:', refModel);
+      }
     } else if (isArrayOfReferences(value)) {
       console.log('This is the array of references:', key, value);
+      const refModel = detectModelByPath(SourceModel, key);
+      if (refModel) {
+        console.log('This is the array reference model:', refModel);
+        const newRefs = [];
+        for (const refId of value) {
+          console.log('This is the migrate props:', {
+            modelName: refModel,
+            rootId: refId.toString(),
+            idMap: new Map(idMap),
+          });
+          const newRefId = await migrateDocumentCascade(refModel, refId.toString(), new Map(idMap));
+          newRefs.push(newRefId);
+        }
+        clonedDoc[key] = newRefs;
+      }
     }
   }
+  console.log(`This is the cloned document with model: ${modelName}`, clonedDoc);
   return newId;
 };
 
@@ -88,6 +111,26 @@ function isSingleReference(value) {
 
 function isArrayOfReferences(value) {
   return Array.isArray(value) && value.every((v) => isSingleReference(v));
+}
+
+/**
+ * Detects the model referenced by the path in the model's schema.
+ */
+function detectModelByPath(model, path) {
+  const schemaPath = model.schema.path(path);
+  if (!schemaPath) return null;
+
+  const options = schemaPath.options;
+
+  if (options && options.ref) {
+    return options.ref;
+  }
+
+  if (Array.isArray(options.type) && options.type[0] && options.type[0].ref) {
+    return options.type[0].ref;
+  }
+
+  return null;
 }
 
 main().catch((error) => {
