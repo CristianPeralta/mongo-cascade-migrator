@@ -1,23 +1,62 @@
 const mongoose = require('mongoose');
 
-function connectToMongo(uri) {
-  const connection = mongoose.createConnection(uri);
+// Singleton for connections
+class ConnectionManager {
+  constructor() {
+    this.sourceConnection = null;
+    this.targetConnection = null;
+  }
 
-  connection.on('error', (err) => {
-    console.error('MongoDB connection error:', err);
-  });
+  connectToMongo(uri) {
+    const connection = mongoose.createConnection(uri);
 
-  connection.once('open', () => {
-    console.log('MongoDB connection opened at:', uri);
-  });
+    connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
 
-  connection.on('close', () => {
-    console.log('MongoDB connection closed at:', uri);
-  });
+    connection.once('open', () => {
+      console.log('MongoDB connection opened at:', uri);
+    });
 
-  return connection;
+    connection.on('close', () => {
+      console.log('MongoDB connection closed at:', uri);
+    });
+
+    return connection;
+  }
+
+  setSourceConnection(uri) {
+    this.sourceConnection = this.connectToMongo(uri);
+    return this.sourceConnection;
+  }
+
+  setTargetConnection(uri) {
+    this.targetConnection = this.connectToMongo(uri);
+    return this.targetConnection;
+  }
+
+  getSourceConnection() {
+    return this.sourceConnection;
+  }
+
+  getTargetConnection() {
+    return this.targetConnection;
+  }
+
+  closeConnections() {
+    if (this.sourceConnection) {
+      this.sourceConnection.close();
+    }
+    if (this.targetConnection) {
+      this.targetConnection.close();
+    }
+  }
 }
 
+// Create a unique instance
+const connectionManager = new ConnectionManager();
+
 module.exports = {
-  connectToMongo,
+  connectionManager,
+  connectToMongo: (uri) => connectionManager.connectToMongo(uri),
 };
