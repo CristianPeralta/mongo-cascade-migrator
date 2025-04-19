@@ -117,12 +117,19 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
   }
 
   console.log(`Attempting to save document with model: ${modelName}`);
-  const { document, isSuccess } = await saveDocument(TargetModel, clonedDoc);
+  const { document, isSuccess } = await saveDocument(
+    TargetModel,
+    clonedDoc,
+    originalDoc,
+    rootId,
+    idMap
+  );
 
   return isSuccess ? document._id : null;
 };
 
-async function saveDocument(model, doc) {
+async function saveDocument(model, doc, originalDoc, rootId, idMap) {
+  const modelName = model.modelName;
   try {
     // Try to create the document
     const newDoc = await model.create(doc);
