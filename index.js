@@ -106,11 +106,9 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
       !isDate(value)
     ) {
       // Handle nested objects - they might contain references
-      console.log(`Processing nested object in field ${key}:`, value);
       clonedDoc[key] = await processNestedObject(value, SourceModel, key, idMap);
     } else if (Array.isArray(value)) {
       // Handle arrays - they might contain objects or references
-      console.log(`Processing array in field ${key}:`, value);
       clonedDoc[key] = await processArray(value, SourceModel, key, idMap);
     } else {
       // Simple value (string, number, boolean, etc.)
@@ -118,11 +116,87 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
     }
   }
 
-  console.log(`Saving cloned document with model: ${modelName}`, clonedDoc);
-  // Save the cloned document
-  // await TargetModel.create(clonedDoc);
-  return newId;
+  console.log(`Attempting to save document with model: ${modelName}`);
+  const { document, isSuccess } = await saveDocument(TargetModel, clonedDoc);
+
+  return isSuccess ? document._id : null;
 };
+
+async function saveDocument(model, doc) {
+  try {
+    // Try to create the document
+    const newDoc = await model.create(doc);
+    console.log(`Successfully created new document with ID: ${newDoc._id}`);
+    return { document: newDoc, isSuccess: true };
+  } catch (error) {
+    // If error is due to duplicate key (unique index violation)
+    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+      if (error.code === 11000 || error.code === 11001) {
+        console.log(`Duplicate key error detected for model ${modelName}:`, error.keyValue);
+
+        // Find the existing document using the unique fields from the error
+        const uniqueFields = error.keyValue;
+        const existingDoc = await model.findOne(uniqueFields).lean();
+
+        if (existingDoc) {
+          console.log(`Found existing document with ID: ${existingDoc._id}`);
+
+          // Update the idMap to point to the existing document instead
+          idMap.set(rootId, existingDoc._id);
+
+          // Return the existing document's ID
+          return { document: existingDoc, isSuccess: true };
+        } else {
+          // This is an edge case - we got a duplicate key error but couldn't find the document
+          // Try to find a more flexible approach to identify the document
+          console.log(
+            'Could not find existing document with the exact unique fields. Trying alternative approach...'
+          );
+
+          // Create a query based on available unique fields from the original document
+          // This is a more flexible approach that might help find the document
+          const uniqueQuery = {};
+
+          // Get the schema to identify unique fields
+          const schemaIndexes = model.schema.indexes();
+          const uniqueIndexFields = schemaIndexes
+            .filter((index) => index[1] && index[1].unique)
+            .map((index) => Object.keys(index[0]));
+
+          // Flatten the array of arrays
+          const allUniqueFields = [].concat(...uniqueIndexFields);
+
+          // Build a query with all available unique fields from the original document
+          allUniqueFields.forEach((field) => {
+            if (originalDoc[field] !== undefined) {
+              uniqueQuery[field] = originalDoc[field];
+            }
+          });
+
+          if (Object.keys(uniqueQuery).length > 0) {
+            const alternativeDoc = await model.findOne(uniqueQuery).lean();
+
+            if (alternativeDoc) {
+              console.log(`Found document using alternative query with ID: ${alternativeDoc._id}`);
+              idMap.set(rootId, alternativeDoc._id);
+              return { document: alternativeDoc, isSuccess: true };
+            }
+          }
+
+          // If we still can't find it, log the error and return null
+          console.error(
+            'Could not resolve the duplicate key conflict. Migration for this document failed.'
+          );
+          return { document: null, isSuccess: false };
+        }
+      }
+    }
+
+    // For other errors, log and return null
+    console.error(`Error saving document for model ${modelName}:`, error);
+    return { document: null, isSuccess: false };
+  }
+}
 
 function isSingleReference(value) {
   if (value instanceof mongoose.Types.ObjectId) {
