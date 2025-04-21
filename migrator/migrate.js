@@ -81,6 +81,32 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
   return isSuccess ? document._id : null;
 };
 
+const migrateDocumentsByQuery = async (modelName, query, idMap) => {
+  const sourceConnection = connectionManager.getSourceConnection();
+
+  const SourceModel = sourceConnection.model(modelName);
+
+  const docs = await SourceModel.find(query).lean();
+  console.log(
+    `Found ${docs.length} documents for model ${modelName} with query ${JSON.stringify(query)}`
+  );
+  if (!docs.length) {
+    console.log(`No documents found for model ${modelName} with query ${JSON.stringify(query)}`);
+    return [];
+  }
+
+  const newIds = [];
+  for (const doc of docs) {
+    const newId = await migrateDocumentCascade(modelName, doc._id.toString(), idMap);
+    if (newId) {
+      console.log(`Document migrated. New ID: ${newId}`);
+      newIds.push(newId);
+    }
+  }
+
+  return newIds;
+};
+
 async function saveDocument(model, doc, originalDoc, rootId, idMap) {
   const modelName = model.modelName;
   try {
@@ -299,4 +325,5 @@ async function processArray(arr, parentModel, parentPath, idMap) {
 
 module.exports = {
   migrateDocumentCascade,
+  migrateDocumentsByQuery,
 };

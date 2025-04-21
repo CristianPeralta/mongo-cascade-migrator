@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { connectionManager } = require('./db/connect');
 const { registerModels } = require('./models');
-const { migrateDocumentCascade } = require('./migrator/migrate');
+const { migrateDocumentCascade, migrateDocumentsByQuery } = require('./migrator/migrate');
 
 const SOURCE_URI = process.env.SOURCE_URI || 'mongodb://localhost:27017/source_db';
 const TARGET_URI = process.env.TARGET_URI || 'mongodb://localhost:27018/target_db';
@@ -41,6 +41,8 @@ async function main() {
     }
   } else if (query) {
     console.log('This is the query:', query);
+    const newIds = await migrateDocumentsByQuery(modelName, query, idMap);
+    console.log('This is the new ids:', newIds);
   }
   console.log('This is the id map:', idMap);
 
