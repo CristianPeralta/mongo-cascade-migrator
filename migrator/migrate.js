@@ -2,7 +2,6 @@ const { connectionManager } = require('../db/connect');
 const mongoose = require('mongoose');
 
 const migrateDocumentCascade = async (modelName, rootId, idMap) => {
-  console.log('---------------------------------------------------------');
   // Check if document has already been migrated
   if (idMap.has(rootId)) {
     console.log(`Document ${rootId} already migrated to ${idMap.get(rootId)}`);
@@ -69,7 +68,6 @@ const migrateDocumentCascade = async (modelName, rootId, idMap) => {
     }
   }
 
-  console.log(`Attempting to save document with model: ${modelName}`);
   const { document, isSuccess } = await saveDocument(
     TargetModel,
     clonedDoc,
