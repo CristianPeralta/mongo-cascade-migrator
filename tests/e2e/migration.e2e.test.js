@@ -102,4 +102,32 @@ describe('E2E Migration', () => {
     const migratedDoc2 = await AuthorDst.findById(newIds[1]).lean();
     expect(migratedDoc2).toMatchObject({ name: 'baz', email: 'qux@example.com' });
   });
+
+  it('should migrate multiple Books documents', async () => {
+    const BookSrc = sourceConn.model('Books');
+    const BookDst = targetConn.model('Books');
+    const AuthorSrc = sourceConn.model('Authors');
+    // Insert into source
+    const authorSrc1Doc = await AuthorSrc.create({ name: 'foo', email: 'bar@example.com' });
+    const authorSrc2Doc = await AuthorSrc.create({ name: 'baz', email: 'qux@example.com' });
+    await BookSrc.create({ title: 'foo', author: authorSrc1Doc._id });
+    await BookSrc.create({ title: 'baz', author: authorSrc2Doc._id });
+    const idMap = new Map();
+    // Run migration
+    const newIds = await migrateDocumentsByQuery('Books', {}, idMap);
+    // Should have migrated
+    expect(newIds).toBeDefined();
+    expect(newIds.length).toBe(2);
+    const migratedDoc1 = await BookDst.findById(newIds[0]).lean();
+    expect(migratedDoc1).toMatchObject({ title: 'foo' });
+    const migratedDoc2 = await BookDst.findById(newIds[1]).lean();
+    expect(migratedDoc2).toMatchObject({ title: 'baz' });
+    // Check author was migrated and has correct ID mapping
+    const migratedAuthorId1 = idMap.get(authorSrc1Doc._id.toString());
+    expect(migratedAuthorId1).toBeDefined();
+    expect(migratedDoc1.author.toString()).toBe(migratedAuthorId1.toString());
+    const migratedAuthorId2 = idMap.get(authorSrc2Doc._id.toString());
+    expect(migratedAuthorId2).toBeDefined();
+    expect(migratedDoc2.author.toString()).toBe(migratedAuthorId2.toString());
+  });
 });
