@@ -1,7 +1,7 @@
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 const { connectionManager } = require('../../db/connect');
-const { migrateDocumentCascade } = require('../../migrator/migrate');
+const { migrateDocumentCascade, migrateDocumentsByQuery } = require('../../migrator/migrate');
 
 // Use the Authors and Books schemas for E2E testing
 const AuthorSchema = require('../../models/schemas/Authors');
@@ -61,7 +61,7 @@ describe('E2E Migration', () => {
     expect(migratedDoc).toMatchObject({ name: 'foo', email: 'bar@example.com' });
   });
 
-  it('should migrate a single Books document', async () => {
+  it('should migrate a single Books document with a nested author', async () => {
     const BookSrc = sourceConn.model('Books');
     const BookDst = targetConn.model('Books');
     const AuthorSrc = sourceConn.model('Authors');
@@ -83,5 +83,23 @@ describe('E2E Migration', () => {
     // Check author data
     const migratedAuthor = await AuthorDst.findById(migratedAuthorId).lean();
     expect(migratedAuthor).toMatchObject({ name: 'foo', email: 'bar@example.com' });
+  });
+
+  it('should migrate multiple Author documents', async () => {
+    const AuthorSrc = sourceConn.model('Authors');
+    const AuthorDst = targetConn.model('Authors');
+    // Insert into source
+    await AuthorSrc.create({ name: 'foo', email: 'bar@example.com' });
+    await AuthorSrc.create({ name: 'baz', email: 'qux@example.com' });
+    const idMap = new Map();
+    // Run migration
+    const newIds = await migrateDocumentsByQuery('Authors', {}, idMap);
+    // Should have migrated
+    expect(newIds).toBeDefined();
+    expect(newIds.length).toBe(2);
+    const migratedDoc1 = await AuthorDst.findById(newIds[0]).lean();
+    expect(migratedDoc1).toMatchObject({ name: 'foo', email: 'bar@example.com' });
+    const migratedDoc2 = await AuthorDst.findById(newIds[1]).lean();
+    expect(migratedDoc2).toMatchObject({ name: 'baz', email: 'qux@example.com' });
   });
 });

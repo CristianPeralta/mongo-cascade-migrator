@@ -4,7 +4,7 @@
   "description": "Clone documents and their references recursively from a source DB to a destination one.",
   "main": "index.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --verbose",
     "start": "node index.js --model=Authors --id=ObjectId",
     "lint": "eslint .",
     "format": "prettier . --write"
