@@ -17,7 +17,7 @@ describe('migrator logic', () => {
     jest
       .spyOn(require('../db/connect').connectionManager, 'getTargetConnection')
       .mockReturnValue(mockConnection);
-    const result = await migrateDocumentCascade('Example', 'nonexistentId', new Map());
+    const result = await migrateDocumentCascade('Authors', 'nonexistentId', new Map());
     expect(result).toBeNull();
   });
 });

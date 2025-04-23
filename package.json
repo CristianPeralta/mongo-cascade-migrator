@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "start": "node index.js --model=Example --id=ObjectId",
+    "start": "node index.js --model=Authors --id=ObjectId",
     "lint": "eslint .",
     "format": "prettier . --write"
   },

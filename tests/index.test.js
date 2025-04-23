@@ -36,7 +36,7 @@ describe('main.js (main logic)', () => {
   });
 
   it('should call migrateDocumentCascade if --model and --id are provided', async () => {
-    process.argv = ['node', 'index.js', '--model=Example', '--id=123'];
+    process.argv = ['node', 'index.js', '--model=Authors', '--id=123'];
     const mockLog = jest.spyOn(console, 'log').mockImplementation(() => {});
     const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('exit');
@@ -45,13 +45,13 @@ describe('main.js (main logic)', () => {
       await main();
     } catch (e) {}
     const { migrateDocumentCascade } = require('../migrator/migrate');
-    expect(migrateDocumentCascade).toHaveBeenCalledWith('Example', '123', expect.any(Map));
+    expect(migrateDocumentCascade).toHaveBeenCalledWith('Authors', '123', expect.any(Map));
     mockLog.mockRestore();
     mockExit.mockRestore();
   });
 
   it('should call migrateDocumentsByQuery if --model and --query are provided', async () => {
-    process.argv = ['node', 'index.js', '--model=Example', '--query="{\"name\":\"test\"}"'];
+    process.argv = ['node', 'index.js', '--model=Authors', '--query="{\"name\":\"test\"}"'];
     const mockLog = jest.spyOn(console, 'log').mockImplementation(() => {});
     const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('exit');
@@ -61,7 +61,7 @@ describe('main.js (main logic)', () => {
     } catch (e) {}
     const { migrateDocumentsByQuery } = require('../migrator/migrate');
     expect(migrateDocumentsByQuery).toHaveBeenCalledWith(
-      'Example',
+      'Authors',
       { name: 'test' },
       expect.any(Map)
     );

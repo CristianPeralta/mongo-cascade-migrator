@@ -141,8 +141,8 @@ dist
 
 # schemas
 models/schemas/*
-# But don't ignore Example.js!
-!/models/schemas/Example.js
-
+# But don't ignore Authors.js!
+!/models/schemas/Authors.js
+!/models/schemas/Books.js
 # utils
 utils/
