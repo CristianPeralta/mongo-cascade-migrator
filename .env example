@@ -1,0 +1,5 @@
+# SOURCE DB
+SOURCE_URI=mongodb://127.0.0.1:27017/source_db
+
+# TARGET DB
+TARGET_URI=mongodb://127.0.0.1:27018/target_db
