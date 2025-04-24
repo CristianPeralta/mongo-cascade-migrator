@@ -144,5 +144,3 @@ models/schemas/*
 # But don't ignore Authors.js!
 !/models/schemas/Authors.js
 !/models/schemas/Books.js
-# utils
-utils/
