@@ -2,6 +2,10 @@
 
 A MongoDB document migration tool that handles recursive document references and maintains data integrity during migration.
 
+<div align="center">
+  <img src="./images/mongo-cascade-migrator.png" width="800" alt="Mongo Cascade Migrator Functionality">
+</div>
+
 ## Features
 
 - Migrates documents and their references recursively
