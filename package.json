@@ -1,6 +1,6 @@
 {
   "name": "mongo-cascade-migrator",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Clone documents and their references recursively from a source DB to a destination one.",
   "main": "index.js",
   "bin": {
