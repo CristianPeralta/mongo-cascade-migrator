@@ -8,8 +8,7 @@ const compat = new FlatCompat({
 
 module.exports = [
   js.configs.recommended,
-  ...compat.extends('plugin:prettier/recommended'),
-
+  ...compat.extends('prettier'),
   {
     files: ['**/*.{js,mjs,cjs}'],
     languageOptions: {
@@ -17,13 +16,14 @@ module.exports = [
       sourceType: 'commonjs',
       globals: {
         ...globals.node,
+        ...globals.jest,
       },
     },
     rules: {
       'no-console': 'warn',
+      'no-unused-vars': 'warn',
     },
   },
-
   {
     ignores: ['node_modules/**', 'dist/**'],
   },

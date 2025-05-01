@@ -43,7 +43,9 @@ describe('main.js (main logic)', () => {
     });
     try {
       await main();
-    } catch (e) {}
+    } catch (e) {
+      console.log(e);
+    }
     const { migrateDocumentCascade } = require('../migrator/migrate');
     expect(migrateDocumentCascade).toHaveBeenCalledWith('Authors', '123', expect.any(Map));
     mockLog.mockRestore();
@@ -51,14 +53,16 @@ describe('main.js (main logic)', () => {
   });
 
   it('should call migrateDocumentsByQuery if --model and --query are provided', async () => {
-    process.argv = ['node', 'index.js', '--model=Authors', '--query="{\"name\":\"test\"}"'];
+    process.argv = ['node', 'index.js', '--model=Authors', '--query={"name":"test"}'];
     const mockLog = jest.spyOn(console, 'log').mockImplementation(() => {});
     const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('exit');
     });
     try {
       await main();
-    } catch (e) {}
+    } catch (e) {
+      console.log(e);
+    }
     const { migrateDocumentsByQuery } = require('../migrator/migrate');
     expect(migrateDocumentsByQuery).toHaveBeenCalledWith(
       'Authors',
