@@ -2,17 +2,15 @@ require('dotenv').config();
 const { connectionManager } = require('./db/connect');
 const { registerModels } = require('./models');
 const { migrateDocumentCascade, migrateDocumentsByQuery } = require('./migrator/migrate');
+const path = require('path');
 
-async function main(config = null) {
-  let sourceUri, targetUri, modelName, rootId, query;
+async function main(modelName, rootId, query, config = null) {
+  let sourceUri, targetUri;
 
   if (config) {
     // Programmatic usage
     sourceUri = config.originUrl;
     targetUri = config.destinationUrl;
-    modelName = config.modelName;
-    rootId = config.rootId;
-    query = config.query;
   } else {
     // CLI usage
     const args = process.argv.slice(2);
@@ -45,10 +43,14 @@ async function main(config = null) {
   const sourceConnection = connectionManager.setSourceConnection(sourceUri);
   const targetConnection = connectionManager.setTargetConnection(targetUri);
 
+  // Get the absolute path of the current working directory (client project)
+  const clientProjectPath = process.cwd();
+
   // Register models from the configured path or default path
-  const modelsPath = config ? config.schemasPath : './models/schemas';
-  registerModels(sourceConnection, modelsPath);
-  registerModels(targetConnection, modelsPath);
+  const modelsPath = path.join(clientProjectPath, config ? config.schemasPath : 'models/schemas');
+
+  registerModels(sourceConnection, config ? modelsPath : path.join(clientProjectPath, modelsPath));
+  registerModels(targetConnection, config ? modelsPath : path.join(clientProjectPath, modelsPath));
 
   const idMap = new Map();
   if (rootId) {
