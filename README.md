@@ -6,6 +6,28 @@ A MongoDB document migration tool that handles recursive document references and
   <img src="./images/mongo-cascade-migrator.png" width="600" alt="Mongo Cascade Migrator Functionality">
 </div>
 
+## Installation
+
+### Using npm
+
+```bash
+# Install globally
+npm install -g mongo-cascade-migrator
+
+# Or install as a project dependency
+npm install mongo-cascade-migrator
+```
+
+### Manual Installation
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/cristianperaltasegura/mongo-cascade-migrator.git
+cd mongo-cascade-migrator
+npm install
+```
+
 ## Features
 
 - Migrates documents and their references recursively
@@ -16,14 +38,6 @@ A MongoDB document migration tool that handles recursive document references and
 - Preserves timestamps and metadata
 - Supports complex reference chains
 - Command-line interface for easy usage
-
-## Installation
-
-Run the following command to install the dependencies:
-
-```bash
-npm install
-```
 
 ## Configuration
 
@@ -77,12 +91,22 @@ module.exports = YourModelSchema;
 The simplest way to use the migrator is through the CLI:
 
 ```bash
-# Migrate a single document
-node index.js --model=Books --id=bookId
+# If installed globally
+mongo-cascade-migrator --model=Books --id=bookId
+
+# If installed locally
+npx mongo-cascade-migrator --model=Books --id=bookId
 
 # Migrate documents matching a query
-node index.js --model=Books --query='{"title": "The Hobbit"}'
+mongo-cascade-migrator --model=Books --query='{"title": "The Hobbit"}'
 ```
+
+### Available Options
+
+- `--model`: Name of the model to migrate (required)
+- `--id`: Specific document ID to migrate
+- `--query`: JSON query to select multiple documents
+- `--help`: Show help information
 
 ## Features in Detail
 
@@ -99,32 +123,12 @@ node index.js --model=Books --query='{"title": "The Hobbit"}'
 - Orphaned reference handling
 - Conflict resolution for existing documents
 
-### Data Integrity
-
-- Maintains referential integrity
-- Preserves document relationships
-- Handles circular references
-- Preserves timestamps
-
-## Testing
-
-The project includes comprehensive E2E tests that demonstrate:
-
-- Single document migration
-- Document with nested references
-- Bulk document migration
-- Reference integrity verification
-
-Run tests with:
-
-```bash
-npm test
-```
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+ISC License © Cristian Peralta Segura
+
+This project is licensed under the ISC License, which is a permissive free software license published by the Internet Systems Consortium (ISC). This license allows you to use, modify, and distribute the software freely, as long as you include the original copyright notice and disclaimer.

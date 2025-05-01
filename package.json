@@ -3,19 +3,42 @@
   "version": "1.0.2",
   "description": "Clone documents and their references recursively from a source DB to a destination one.",
   "main": "index.js",
+  "bin": {
+    "mongo-cascade-migrator": "./index.js"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/cristianperaltasegura/mongo-cascade-migrator.git"
+    "url": "git://github.com/cristianperalta/mongo-cascade-migrator.git"
   },
   "scripts": {
     "test": "jest --verbose",
     "start": "node index.js --model=Authors --id=ObjectId",
     "lint": "eslint .",
-    "format": "prettier . --write"
+    "format": "prettier . --write",
+    "prepublishOnly": "npm test && npm run lint"
   },
-  "keywords": [],
+  "keywords": [
+    "mongodb",
+    "migration",
+    "mongoose",
+    "database",
+    "cascade",
+    "references",
+    "recursive",
+    "cli",
+    "tool"
+  ],
   "author": "Cristian Peralta Segura",
   "license": "ISC",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "index.js",
+    "models/",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
