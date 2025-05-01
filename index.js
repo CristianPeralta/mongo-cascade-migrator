@@ -1,16 +1,6 @@
 const { main } = require('./main');
 const Config = require('./config');
 
-// Export the main function and Config class for programmatic usage
-module.exports = {
-  migrate: async (options) => {
-    const config = new Config(options);
-    config.validate();
-    return main(config);
-  },
-  Config,
-};
-
 // CLI usage
 if (require.main === module) {
   main().catch((error) => {
@@ -18,3 +8,18 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+// Programmatic usage
+class MongoCascadeMigrator {
+  constructor(options) {
+    const config = new Config(options);
+    this.config = config;
+  }
+
+  async migrate() {
+    await this.config.validate();
+    return main(this.config);
+  }
+}
+
+module.exports = MongoCascadeMigrator;
