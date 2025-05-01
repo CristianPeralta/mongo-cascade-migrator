@@ -86,27 +86,46 @@ module.exports = YourModelSchema;
 
 ## Usage
 
-### Command Line Interface (CLI)
-
-The simplest way to use the migrator is through the CLI:
+### CLI Usage
 
 ```bash
-# If installed globally
-mongo-cascade-migrator --model=Books --id=bookId
-
-# If installed locally
-npx mongo-cascade-migrator --model=Books --id=bookId
-
-# Migrate documents matching a query
-mongo-cascade-migrator --model=Books --query='{"title": "The Hobbit"}'
+node index.js --model=ModelName --id=ObjectId [--query='{"key": "value"}']
 ```
 
-### Available Options
+### Programmatic Usage
 
-- `--model`: Name of the model to migrate (required)
-- `--id`: Specific document ID to migrate
-- `--query`: JSON query to select multiple documents
-- `--help`: Show help information
+```javascript
+const { migrate, Config } = require('mongo-cascade-migrator');
+
+// Example configuration
+const config = new Config({
+  originUrl: 'mongodb://localhost:27017/source_db',
+  destinationUrl: 'mongodb://localhost:27018/target_db',
+  schemasPath: './path/to/your/schemas', // Optional, defaults to './models/schemas'
+  modelName: 'User', // The model to migrate
+  rootId: '507f1f77bcf86cd799439011', // Optional, the ID of the document to migrate
+  query: { status: 'active' }, // Optional, query to find documents to migrate
+});
+
+// Run the migration
+migrate(config)
+  .then((idMap) => {
+    console.log('Migration completed successfully');
+    console.log('ID Map:', idMap);
+  })
+  .catch((error) => {
+    console.error('Migration failed:', error);
+  });
+```
+
+### Configuration Options
+
+- `originUrl`: MongoDB connection URL for the source database
+- `destinationUrl`: MongoDB connection URL for the target database
+- `schemasPath`: Path to the directory containing your Mongoose schemas (optional)
+- `modelName`: Name of the model to migrate
+- `rootId`: ID of the document to migrate (optional)
+- `query`: Query to find documents to migrate (optional)
 
 ## Features in Detail
 

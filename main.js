@@ -3,39 +3,52 @@ const { connectionManager } = require('./db/connect');
 const { registerModels } = require('./models');
 const { migrateDocumentCascade, migrateDocumentsByQuery } = require('./migrator/migrate');
 
-const SOURCE_URI = process.env.SOURCE_URI || 'mongodb://localhost:27017/source_db';
-const TARGET_URI = process.env.TARGET_URI || 'mongodb://localhost:27018/target_db';
+async function main(config = null) {
+  let sourceUri, targetUri, modelName, rootId, query;
 
-async function main() {
-  const args = process.argv.slice(2);
-  const modelArg = args.find((arg) => arg.startsWith('--model='));
-  const idArg = args.find((arg) => arg.startsWith('--id='));
-  const queryArg = args.find((arg) => arg.startsWith('--query='));
+  if (config) {
+    // Programmatic usage
+    sourceUri = config.originUrl;
+    targetUri = config.destinationUrl;
+    modelName = config.modelName;
+    rootId = config.rootId;
+    query = config.query;
+  } else {
+    // CLI usage
+    const args = process.argv.slice(2);
+    const modelArg = args.find((arg) => arg.startsWith('--model='));
+    const idArg = args.find((arg) => arg.startsWith('--id='));
+    const queryArg = args.find((arg) => arg.startsWith('--query='));
 
-  if (!modelArg || (!idArg && !queryArg)) {
-    console.error(
-      'Usage: node index.js --model=ModelName --id=ObjectId [--query=\'{"key": "value"}\']'
-    );
-    process.exit(1);
-  }
-
-  const modelName = modelArg.split('=')[1];
-  const rootId = idArg ? idArg.split('=')[1] : null;
-  let query = null;
-  if (queryArg) {
-    let raw = queryArg.split('=')[1];
-    if (raw.startsWith('"') && raw.endsWith('"')) {
-      raw = raw.slice(1, -1);
+    if (!modelArg || (!idArg && !queryArg)) {
+      console.error(
+        'Usage: node index.js --model=ModelName --id=ObjectId [--query=\'{"key": "value"}\']'
+      );
+      process.exit(1);
     }
-    query = JSON.parse(raw);
+
+    modelName = modelArg.split('=')[1];
+    rootId = idArg ? idArg.split('=')[1] : null;
+    if (queryArg) {
+      let raw = queryArg.split('=')[1];
+      if (raw.startsWith('"') && raw.endsWith('"')) {
+        raw = raw.slice(1, -1);
+      }
+      query = JSON.parse(raw);
+    }
+
+    sourceUri = process.env.SOURCE_URI || 'mongodb://localhost:27017/source_db';
+    targetUri = process.env.TARGET_URI || 'mongodb://localhost:27018/target_db';
   }
 
   // Use the singleton for connections
-  const sourceConnection = connectionManager.setSourceConnection(SOURCE_URI);
-  const targetConnection = connectionManager.setTargetConnection(TARGET_URI);
+  const sourceConnection = connectionManager.setSourceConnection(sourceUri);
+  const targetConnection = connectionManager.setTargetConnection(targetUri);
 
-  registerModels(sourceConnection);
-  registerModels(targetConnection);
+  // Register models from the configured path or default path
+  const modelsPath = config ? config.schemasPath : './models/schemas';
+  registerModels(sourceConnection, modelsPath);
+  registerModels(targetConnection, modelsPath);
 
   const idMap = new Map();
   if (rootId) {
@@ -54,6 +67,8 @@ async function main() {
 
   // Close connections using the singleton
   connectionManager.closeConnections();
+
+  return idMap;
 }
 
 module.exports = { main };
