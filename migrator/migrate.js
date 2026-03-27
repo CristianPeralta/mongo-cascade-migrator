@@ -2,6 +2,9 @@ const { connectionManager } = require('../db/connect');
 const mongoose = require('mongoose');
 
 const migrateDocumentCascade = async (modelName, rootId, idMap) => {
+  if (typeof rootId !== 'string') {
+    rootId = rootId.toString();
+  }
   // Check if document has already been migrated
   if (idMap.has(rootId)) {
     console.log(`Document ${rootId} already migrated to ${idMap.get(rootId)}`);
